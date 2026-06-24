@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: Product API
+  description: |
+    API REST de productos escrita en Go siguiendo Clean Architecture.
+    Soporta persistencia in-memory (por defecto) o MongoDB.
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Franco Sosa
+    url: https://github.com/francososa97/product-api
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor local
+
+tags:
+  - name: products
+    description: Operaciones sobre productos
+  - name: health
+    description: Estado del servicio
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Healthcheck
+      description: Verifica que el servicio esté operativo. Útil para probes de liveness/readiness.
+      operationId: healthCheck
+      responses:
+        "200":
+          description: El servicio está operativo.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /products:
+    get:
+      tags: [products]
+      summary: Lista productos
+      description: Devuelve todos los productos, opcionalmente ordenados por precio.
+      operationId: getAllProducts
+      parameters:
+        - name: sortByPriceAsc
+          in: query
+          description: Si es `true`, ordena por precio ascendente; de lo contrario, descendente.
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Lista de productos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      tags: [products]
+      summary: Crea un producto
+      description: Da de alta un producto. El servidor genera el `id` (UUID v4).
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Producto creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /products/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [products]
+      summary: Obtiene un producto por ID
+      operationId: getProductById
+      responses:
+        "200":
+          description: Producto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [products]
+      summary: Actualiza un producto
+      description: Actualiza el nombre y el precio de un producto existente conservando su `id`.
+      operationId: updateProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "200":
+          description: Producto actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [products]
+      summary: Elimina un producto
+      operationId: deleteProduct
+      responses:
+        "204":
+          description: Producto eliminado (sin contenido).
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    ProductId:
+      name: id
+      in: path
+      required: true
+      description: Identificador único del producto (UUID v4).
+      schema:
+        type: string
+        example: 8f14e45f-ceea-467d-9a1b-2c3d4e5f6a7b
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador único generado por el servidor.
+          example: 8f14e45f-ceea-467d-9a1b-2c3d4e5f6a7b
+        name:
+          type: string
+          example: Teclado mecánico
+        price:
+          type: number
+          format: double
+          example: 149.99
+      required: [id, name, price]
+
+    ProductInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre del producto. No puede estar vacío.
+          example: Teclado mecánico
+        price:
+          type: number
+          format: double
+          description: Precio del producto. No puede ser negativo.
+          example: 149.99
+      required: [name, price]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Texto del estado HTTP.
+          example: Not Found
+        message:
+          type: string
+          description: Detalle legible del error.
+          example: producto no encontrado
+        statusCode:
+          type: integer
+          example: 404
+      required: [error, message, statusCode]
+
+  responses:
+    BadRequest:
+      description: Petición inválida (JSON malformado o validación de dominio fallida).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Bad Request
+            message: el precio del producto no puede ser negativo
+            statusCode: 400
+    NotFound:
+      description: El producto no existe.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Not Found
+            message: producto no encontrado
+            statusCode: 404

@@ -1,0 +1,31 @@
+# Binarios compilados
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+product-api
+
+# Salida de tests y cobertura
+*.test
+*.out
+coverage.*
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Archivos de IDE / editor
+.idea/
+.vscode/
+*.swp
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Cachés de Go
+/vendor/
+go.work
+go.work.sum
